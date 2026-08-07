@@ -1,6 +1,6 @@
 export const APP_CONFIG = {
   // ضع هنا رابط Google Apps Script Web App الذي سينشر من ملف gs/
-  APPS_SCRIPT_URL: import.meta.env.VITE_APPS_SCRIPT_URL as string || '',
+ APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwYeu0Fi4IOv5yFDJm7Z2pWIiQDzKvedcRKkChWs6Ts4G4_Vq-mfPLr3lfSyPshMESKjQ/exec',
   APP_NAME: 'زاد الحلقات',
   APP_NAME_EN: 'Zad Al-Halaqat',
   LOGO_URL: '/image copy.png',
