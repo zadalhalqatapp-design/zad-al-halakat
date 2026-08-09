@@ -113,6 +113,7 @@ function routeAction(action, p) {
     // الإنجاز
     case 'getProgress': return getProgress(p.studentId);
     case 'saveProgress': return saveProgress(p.hadithId, p.field, p.value, p._session);
+    case 'saveMediaProgress': return saveMediaProgress(p.hadithId, p.mediaType, p.data, p._session);
     case 'getDailyLessons': return getDailyLessons(p._session);
 
     // الدورات
