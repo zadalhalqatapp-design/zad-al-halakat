@@ -51,10 +51,17 @@ function getSettings() {
     secondaryColor: '#d88f20',
     aboutText: '',
     contactEmail: '',
-    contactPhone: ''
+    contactPhone: '',
+    videoCompletionThreshold: 90,
+    audioCompletionThreshold: 90,
+    pdfCompletionThreshold: 90
   };
   rows.forEach(function(r) {
     settings[r.key] = r.value;
+  });
+  ['videoCompletionThreshold', 'audioCompletionThreshold', 'pdfCompletionThreshold'].forEach(function(k) {
+    var n = Number(settings[k]);
+    settings[k] = isNaN(n) || n <= 0 ? 90 : Math.min(100, n);
   });
   return settings;
 }
