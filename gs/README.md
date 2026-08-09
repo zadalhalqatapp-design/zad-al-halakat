@@ -72,7 +72,7 @@
 1. أنشئ ملف `.env` في جذر المشروع
 2. أضف السطر التالي (مع استبدال الرابط برابطك):
 ```
-VITE_APPS_SCRIPT_URL=https://script.google.com/macros/s/AKfycbyv-ut0XqH6UsSllxj1E9GE0ZEvHd3RjbVud9yiBEvPFBJgWqd4fxDjiZv1A6QUowU/exec
+VITE_APPS_SCRIPT_URL=[https://script.google.com/macros/s/AKfycbyv-ut0XqH6UsSllxj1E9GE0ZEvHd3RjbVud9yiBEvPFBJgWqd4fxDjiZv1A6QUowU/exec](https://script.google.com/macros/s/AKfycbxrw2DcpEoJl6WwwBp88cwpIP20p-w54V1l0DiwujWwrC1lZRgTCtvWAow9yhMcHG1QkQ/exec)
 ```
 
 ---
