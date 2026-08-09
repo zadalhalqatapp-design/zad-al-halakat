@@ -27,7 +27,7 @@ var SHEET_HEADERS = {
   'الطلاب': ['id', 'name', 'email', 'passwordHash', 'phone', 'status', 'rejectionReason', 'suspensionReason', 'createdAt', 'approvedAt', 'avatarUrl', 'cycleId'],
   'طلبات التسجيل': ['id', 'name', 'email', 'passwordHash', 'phone', 'status', 'createdAt'],
   'الأحاديث': ['id', 'number', 'text', 'explanation', 'youtubeUrl', 'audioUrl', 'pdfUrl', 'category', 'narrator'],
-  'الإنجاز': ['id', 'studentId', 'hadithId', 'memorized', 'listened', 'read', 'updatedAt'],
+  'الإنجاز': ['id', 'studentId', 'hadithId', 'memorized', 'listened', 'read', 'watched', 'videoPercent', 'videoPosition', 'audioPercent', 'audioPosition', 'pdfPercent', 'pdfLastPage', 'pdfTotalPages', 'startedAt', 'completedAt', 'updatedAt'],
   'الدورات': ['id', 'name', 'startDate', 'endDate', 'status', 'studentIds'],
   'الشهادات': ['id', 'certificateNumber', 'studentId', 'studentName', 'cycleId', 'cycleName', 'issueDate', 'progressPercent', 'qrCode'],
   'الرسائل': ['id', 'fromId', 'fromName', 'fromRole', 'toId', 'toName', 'toRole', 'subject', 'body', 'sentAt', 'read'],
