@@ -1,0 +1,713 @@
+/* =========================================================
+   إعدادات الصفحة
+========================================================= */
+
+.certificate-print-page {
+  direction: rtl;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #eef1ee;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   الشهادة
+========================================================= */
+
+.certificate {
+  position: relative;
+
+  width: 297mm;
+  height: 210mm;
+
+  box-sizing: border-box;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(190, 139, 43, 0.035),
+      transparent 45%
+    ),
+    #faf9f4;
+
+  color: #2d302e;
+
+  border: 3px solid #185b46;
+
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.12);
+
+  font-family:
+    "Tajawal",
+    "Noto Sans Arabic",
+    "Arial",
+    sans-serif;
+}
+
+/* الإطار الداخلي */
+
+.certificate::before {
+  content: "";
+  position: absolute;
+
+  inset: 8mm;
+
+  border: 1px solid #be8b2b;
+
+  pointer-events: none;
+
+  z-index: 1;
+}
+
+/* الإطار الداخلي الثاني */
+
+.certificate::after {
+  content: "";
+  position: absolute;
+
+  inset: 12mm;
+
+  border: 1px solid rgba(190, 139, 43, 0.35);
+
+  pointer-events: none;
+
+  z-index: 1;
+}
+
+/* =========================================================
+   المحتوى
+========================================================= */
+
+.certificate-content {
+  position: relative;
+
+  z-index: 5;
+
+  width: 100%;
+  height: 100%;
+
+  box-sizing: border-box;
+
+  padding:
+    13mm
+    24mm
+    10mm
+    24mm;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  text-align: center;
+}
+
+/* =========================================================
+   الشعار
+========================================================= */
+
+.certificate-logo-wrapper {
+  width: 28mm;
+  height: 28mm;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-top: 1mm;
+  margin-bottom: 1mm;
+}
+
+.certificate-logo {
+  display: block;
+
+  max-width: 100%;
+  max-height: 100%;
+
+  object-fit: contain;
+}
+
+/* =========================================================
+   اسم المؤسسة
+========================================================= */
+
+.certificate-brand {
+  color: #185b46;
+
+  font-size: 16pt;
+  font-weight: 800;
+
+  line-height: 1;
+
+  margin-top: 0;
+  margin-bottom: 3mm;
+}
+
+/* =========================================================
+   عنوان الشهادة
+========================================================= */
+
+.certificate-title {
+  margin: 0;
+
+  color: #185b46;
+
+  font-size: 25pt;
+  font-weight: 800;
+
+  line-height: 1.2;
+}
+
+/* =========================================================
+   زخرفة العنوان
+========================================================= */
+
+.certificate-title-decoration {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 4mm;
+
+  margin-top: 3mm;
+  margin-bottom: 4mm;
+}
+
+.certificate-title-decoration span {
+  width: 25mm;
+  height: 0.5mm;
+
+  background: #be8b2b;
+}
+
+.certificate-title-decoration b {
+  color: #be8b2b;
+
+  font-size: 10pt;
+}
+
+/* =========================================================
+   النص التعريفي
+========================================================= */
+
+.certificate-introduction {
+  margin: 0;
+
+  color: #5f6360;
+
+  font-size: 12pt;
+  font-weight: 400;
+
+  line-height: 1.5;
+}
+
+.certificate-introduction strong {
+  color: #185b46;
+  font-weight: 700;
+}
+
+/* =========================================================
+   اسم الطالب
+========================================================= */
+
+.certificate-student-name {
+  margin: 3mm 0 1mm;
+
+  color: #185b46;
+
+  font-size: 24pt;
+  font-weight: 800;
+
+  line-height: 1.2;
+}
+
+/* الخط تحت الاسم */
+
+.certificate-name-line {
+  width: 62mm;
+  height: 0.6mm;
+
+  background: #be8b2b;
+
+  margin-bottom: 3mm;
+}
+
+/* =========================================================
+   الوصف
+========================================================= */
+
+.certificate-description {
+  margin: 0;
+
+  color: #5f6360;
+
+  font-size: 11.5pt;
+
+  line-height: 1.4;
+}
+
+/* =========================================================
+   اسم الدورة
+========================================================= */
+
+.certificate-cycle {
+  margin-top: 2mm;
+
+  color: #185b46;
+
+  font-size: 19pt;
+  font-weight: 800;
+
+  line-height: 1.3;
+}
+
+/* =========================================================
+   نسبة الإنجاز
+========================================================= */
+
+.certificate-progress {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 3mm;
+
+  margin-top: 3mm;
+
+  color: #2d302e;
+
+  font-size: 10.5pt;
+}
+
+.certificate-progress strong {
+  color: #185b46;
+
+  font-size: 12pt;
+  font-weight: 800;
+}
+
+/* =========================================================
+   تفاصيل الشهادة
+========================================================= */
+
+.certificate-details {
+  width: 155mm;
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 0;
+
+  margin-top: 5mm;
+
+  border-top: 0.4mm solid #dedbd1;
+  border-bottom: 0.4mm solid #dedbd1;
+}
+
+.certificate-detail {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-height: 14mm;
+
+  padding: 2mm 6mm;
+
+  box-sizing: border-box;
+}
+
+.certificate-detail:first-child {
+  border-left: 0.3mm solid #dedbd1;
+}
+
+.certificate-detail-label {
+  color: #777a77;
+
+  font-size: 8.5pt;
+
+  margin-bottom: 1mm;
+}
+
+.certificate-detail-value {
+  color: #2d302e;
+
+  font-size: 10pt;
+  font-weight: 700;
+}
+
+.certificate-number {
+  font-family:
+    "Tajawal",
+    Arial,
+    sans-serif;
+
+  letter-spacing: 0.2px;
+}
+
+/* =========================================================
+   أسفل الشهادة
+========================================================= */
+
+.certificate-footer {
+  position: absolute;
+
+  left: 25mm;
+  right: 25mm;
+
+  bottom: 13mm;
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr 1fr;
+
+  align-items: end;
+
+  width: calc(100% - 50mm);
+}
+
+/* =========================================================
+   QR
+========================================================= */
+
+.certificate-qr-section {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: flex-end;
+
+  min-height: 32mm;
+}
+
+.certificate-qr {
+  width: 28mm;
+  height: 28mm;
+
+  object-fit: contain;
+
+  display: block;
+
+  background: white;
+
+  border: 1px solid #dedbd1;
+
+  padding: 1mm;
+
+  box-sizing: border-box;
+}
+
+.certificate-qr-section span {
+  color: #777a77;
+
+  font-size: 7.5pt;
+
+  margin-top: 1.5mm;
+}
+
+.certificate-qr-loading {
+  width: 28mm;
+  height: 28mm;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  color: #777a77;
+
+  font-size: 6pt;
+
+  border: 1px solid #dedbd1;
+}
+
+/* =========================================================
+   الختم
+========================================================= */
+
+.certificate-seal {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 32mm;
+  height: 32mm;
+
+  margin: 0 auto;
+}
+
+.certificate-seal-inner {
+  width: 27mm;
+  height: 27mm;
+
+  border: 1px solid #be8b2b;
+  border-radius: 50%;
+
+  outline: 1px solid #185b46;
+  outline-offset: -3px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  box-sizing: border-box;
+
+  color: #185b46;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(190, 139, 43, 0.06),
+      transparent
+    );
+}
+
+.certificate-seal-inner span {
+  font-size: 8pt;
+
+  line-height: 1.2;
+}
+
+.certificate-seal-inner strong {
+  font-size: 9pt;
+
+  line-height: 1.2;
+
+  margin-top: 1mm;
+}
+
+/* =========================================================
+   التوقيع
+========================================================= */
+
+.certificate-signature {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: flex-end;
+
+  min-height: 32mm;
+}
+
+.certificate-signature-line {
+  width: 42mm;
+
+  border-top: 0.3mm solid #6b6e6b;
+
+  margin-bottom: 2mm;
+}
+
+.certificate-signature span {
+  color: #777a77;
+
+  font-size: 8pt;
+}
+
+/* =========================================================
+   رقم الشهادة السفلي
+========================================================= */
+
+.certificate-id {
+  position: absolute;
+
+  bottom: 3.5mm;
+
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  color: #aaa;
+
+  font-size: 5.5pt;
+
+  z-index: 10;
+}
+
+/* =========================================================
+   زخارف الزوايا
+========================================================= */
+
+.certificate-corner {
+  position: absolute;
+
+  width: 24mm;
+  height: 24mm;
+
+  z-index: 2;
+
+  opacity: 0.55;
+}
+
+.certificate-corner::before,
+.certificate-corner::after {
+  content: "";
+
+  position: absolute;
+
+  background: #be8b2b;
+}
+
+.certificate-corner::before {
+  width: 18mm;
+  height: 0.5mm;
+}
+
+.certificate-corner::after {
+  width: 0.5mm;
+  height: 18mm;
+}
+
+/* أعلى اليمين */
+
+.certificate-corner-top-right {
+  top: 17mm;
+  right: 17mm;
+}
+
+.certificate-corner-top-right::before {
+  top: 0;
+  right: 0;
+}
+
+.certificate-corner-top-right::after {
+  top: 0;
+  right: 0;
+}
+
+/* أعلى اليسار */
+
+.certificate-corner-top-left {
+  top: 17mm;
+  left: 17mm;
+}
+
+.certificate-corner-top-left::before {
+  top: 0;
+  left: 0;
+}
+
+.certificate-corner-top-left::after {
+  top: 0;
+  left: 0;
+}
+
+/* أسفل اليمين */
+
+.certificate-corner-bottom-right {
+  bottom: 17mm;
+  right: 17mm;
+}
+
+.certificate-corner-bottom-right::before {
+  bottom: 0;
+  right: 0;
+}
+
+.certificate-corner-bottom-right::after {
+  bottom: 0;
+  right: 0;
+}
+
+/* أسفل اليسار */
+
+.certificate-corner-bottom-left {
+  bottom: 17mm;
+  left: 17mm;
+}
+
+.certificate-corner-bottom-left::before {
+  bottom: 0;
+  left: 0;
+}
+
+.certificate-corner-bottom-left::after {
+  bottom: 0;
+  left: 0;
+}
+
+/* =========================================================
+   إعداد الطباعة
+========================================================= */
+
+@page {
+  size: A4 landscape;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    width: 297mm;
+    height: 210mm;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .certificate-print-page,
+  .certificate-print-page * {
+    visibility: visible;
+  }
+
+  .certificate-print-page {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    width: 297mm;
+    height: 210mm;
+
+    margin: 0;
+    padding: 0;
+
+    display: block;
+
+    background: white !important;
+  }
+
+  .certificate {
+    width: 297mm;
+    height: 210mm;
+
+    margin: 0;
+
+    box-shadow: none;
+
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* منع المتصفح من إضافة هوامش */
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+}
