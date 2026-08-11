@@ -1,4 +1,5 @@
 import { APPS_CONFIG } from '@/config';
+
 import type {
   ApiResponse,
   Session,
@@ -16,6 +17,13 @@ import type {
   Backup,
 } from '@/types';
 
+
+/**
+ * ============================================================
+ * أنواع البيانات العامة
+ * ============================================================
+ */
+
 type AnyData =
   | Record<string, unknown>
   | unknown[]
@@ -28,16 +36,23 @@ type AnyData =
 
 /**
  * ============================================================
- * أخطاء API
+ * خطأ API
  * ============================================================
  */
 
 export class ApiError extends Error {
+
   code?: string;
 
-  constructor(message: string, code?: string) {
+  constructor(
+    message: string,
+    code?: string,
+  ) {
+
     super(message);
+
     this.name = 'ApiError';
+
     this.code = code;
   }
 }
@@ -45,68 +60,7 @@ export class ApiError extends Error {
 
 /**
  * ============================================================
- * Google Drive Types
- * ============================================================
- */
-
-export interface DriveRoot {
-  id: string;
-  name: string;
-  url?: string;
-}
-
-export interface DriveFolder {
-  id: string;
-  name: string;
-  folderId: string;
-  url?: string;
-  icon?: string;
-}
-
-export interface DriveFoldersResponse {
-  root: DriveRoot;
-  folders: DriveFolder[];
-}
-
-export interface DriveFile {
-  id: string;
-  name: string;
-  mimeType: string;
-  size: number;
-  category: string;
-  folderName: string;
-  url?: string;
-  viewUrl?: string;
-  downloadUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface DriveFilesResponse {
-  success?: boolean;
-  category: string;
-  folder: {
-    id: string;
-    name: string;
-    url?: string;
-  };
-  count: number;
-  files: DriveFile[];
-}
-
-export interface DriveFolderInfo {
-  id: string;
-  name: string;
-  folderId: string;
-  url?: string;
-  public: boolean;
-  icon?: string;
-}
-
-
-/**
- * ============================================================
- * الطلب الأساسي
+ * طلب API الرئيسي
  * ============================================================
  */
 
@@ -116,7 +70,15 @@ async function request<T extends AnyData>(
   method: 'GET' | 'POST' = 'POST',
 ): Promise<T> {
 
+
+  /**
+   * ==========================================================
+   * التأكد من وجود رابط Apps Script
+   * ==========================================================
+   */
+
   if (!APPS_CONFIG.APPS_SCRIPT_URL) {
+
     throw new ApiError(
       'لم يتم ضبط رابط Google Apps Script. يرجى إضافته في ملف .env باسم VITE_APPS_SCRIPT_URL.',
       'NOT_CONFIGURED',
@@ -130,7 +92,7 @@ async function request<T extends AnyData>(
    * ==========================================================
    */
 
-  const token =
+  const storedToken =
     typeof localStorage !== 'undefined'
       ? localStorage.getItem(
           APPS_CONFIG.SESSION_KEY,
@@ -141,25 +103,27 @@ async function request<T extends AnyData>(
   let tokenValue: string | null = null;
 
 
-  if (token) {
+  if (storedToken) {
 
     try {
 
+      const parsed =
+        JSON.parse(storedToken) as {
+          token?: string;
+        };
+
+
       tokenValue =
-        (
-          JSON.parse(token) as {
-            token?: string;
-          }
-        ).token ?? null;
+        parsed.token ?? null;
 
     } catch {
 
       /**
-       * إذا كان المخزن يحتوي على
-       * token كنص مباشر.
+       * قد تكون الجلسة مخزنة كنص مباشر.
        */
 
-      tokenValue = token;
+      tokenValue =
+        storedToken;
     }
   }
 
@@ -172,9 +136,6 @@ async function request<T extends AnyData>(
 
   try {
 
-    let response: Response;
-
-
     const body =
       JSON.stringify({
         action,
@@ -183,10 +144,13 @@ async function request<T extends AnyData>(
       });
 
 
+    let response: Response;
+
+
     /**
-     * --------------------------------------------------------
+     * ========================================================
      * GET
-     * --------------------------------------------------------
+     * ========================================================
      */
 
     if (method === 'GET') {
@@ -214,9 +178,9 @@ async function request<T extends AnyData>(
 
 
     /**
-     * --------------------------------------------------------
+     * ========================================================
      * POST
-     * --------------------------------------------------------
+     * ========================================================
      */
 
     else {
@@ -263,7 +227,7 @@ async function request<T extends AnyData>(
         '[API] Parse error:',
         action,
         '| Raw:',
-        text.slice(0, 500),
+        text.slice(0, 1000),
       );
 
 
@@ -276,7 +240,7 @@ async function request<T extends AnyData>(
 
     /**
      * ========================================================
-     * معالجة أخطاء الخادم
+     * خطأ صادر من Apps Script
      * ========================================================
      */
 
@@ -302,15 +266,22 @@ async function request<T extends AnyData>(
 
     /**
      * ========================================================
-     * نجاح
+     * الاستجابة الناجحة
      * ========================================================
      */
 
-    return json.data;
+    return json.data as T;
+
 
   } catch (err) {
 
+
+    /**
+     * لا نحول ApiError إلى NETWORK_ERROR
+     */
+
     if (err instanceof ApiError) {
+
       throw err;
     }
 
@@ -324,7 +295,7 @@ async function request<T extends AnyData>(
 
 
     throw new ApiError(
-      'تعذّر الاتصال بالخادم. تحقق من الاتصال بالإنترنت أو رابط Apps Script.',
+      'تعذّر الاتصال بالخادم. تحقق من الاتصال بالإنترنت أو رابط Google Apps Script.',
       'NETWORK_ERROR',
     );
   }
@@ -333,13 +304,113 @@ async function request<T extends AnyData>(
 
 /**
  * ============================================================
- * Login Response
+ * Login
  * ============================================================
  */
 
 export interface LoginResponse {
+
   session: Session;
+
   user: User;
+}
+
+
+/**
+ * ============================================================
+ * Google Drive Types
+ * ============================================================
+ */
+
+export interface DriveFolder {
+
+  id: string;
+
+  name: string;
+
+  folderId: string;
+
+  url: string;
+
+  icon?: string;
+}
+
+
+export interface DriveFoldersResponse {
+
+  root: {
+
+    id: string;
+
+    name: string;
+
+    url: string;
+  };
+
+  folders: DriveFolder[];
+}
+
+
+export interface DriveFile {
+
+  id: string;
+
+  name: string;
+
+  mimeType: string;
+
+  size: number;
+
+  category: string;
+
+  folderName: string;
+
+  url: string;
+
+  viewUrl: string;
+
+  downloadUrl: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+}
+
+
+export interface DriveFilesResponse {
+
+  success: boolean;
+
+  category: string;
+
+  folder: {
+
+    id: string;
+
+    name: string;
+
+    url: string;
+  };
+
+  count: number;
+
+  files: DriveFile[];
+}
+
+
+export interface DriveFolderInfo {
+
+  id: string;
+
+  name: string;
+
+  folderId: string;
+
+  url: string;
+
+  public: boolean;
+
+  icon?: string;
 }
 
 
@@ -350,6 +421,7 @@ export interface LoginResponse {
  */
 
 export const api = {
+
 
   // ==========================================================
   // Auth
@@ -398,6 +470,7 @@ export const api = {
         token,
       },
     ),
+
 
 
   // ==========================================================
@@ -484,6 +557,7 @@ export const api = {
     ),
 
 
+
   // ==========================================================
   // Supervisors
   // ==========================================================
@@ -534,6 +608,7 @@ export const api = {
     ),
 
 
+
   // ==========================================================
   // Admins
   // ==========================================================
@@ -582,6 +657,7 @@ export const api = {
         id,
       },
     ),
+
 
 
   // ==========================================================
@@ -639,6 +715,7 @@ export const api = {
         hadithId,
       },
     ),
+
 
 
   // ==========================================================
@@ -705,6 +782,7 @@ export const api = {
     ),
 
 
+
   // ==========================================================
   // Cycles
   // ==========================================================
@@ -739,6 +817,7 @@ export const api = {
         cycleId,
       },
     ),
+
 
 
   // ==========================================================
@@ -780,6 +859,7 @@ export const api = {
       },
       'GET',
     ),
+
 
 
   // ==========================================================
@@ -824,6 +904,7 @@ export const api = {
     ),
 
 
+
   // ==========================================================
   // Notifications
   // ==========================================================
@@ -848,6 +929,7 @@ export const api = {
       'sendNotification',
       data,
     ),
+
 
 
   // ==========================================================
@@ -887,6 +969,7 @@ export const api = {
     ),
 
 
+
   // ==========================================================
   // Dashboard
   // ==========================================================
@@ -897,6 +980,7 @@ export const api = {
       {},
       'GET',
     ),
+
 
 
   // ==========================================================
@@ -922,8 +1006,9 @@ export const api = {
     ),
 
 
+
   // ==========================================================
-  // Operations Log
+  // Operation Log
   // ==========================================================
 
   getOperationLog: () =>
@@ -932,6 +1017,7 @@ export const api = {
       {},
       'GET',
     ),
+
 
 
   // ==========================================================
@@ -968,29 +1054,27 @@ export const api = {
     ),
 
 
+
   // ==========================================================
   // Google Drive
   // ==========================================================
-  //
-  // المجلد الرئيسي:
-  //
-  // 📁 زاد الحلقات
-  //
-  // والمجلدات العامة:
-  //
-  // 📄 الكتب PDF
-  // 🎵 الصوتيات
-  // 🏆 الشهادات
-  // 🖼️ صور الطلاب
-  // 🎨 الشعارات والهوية
-  // 📁 المستندات
-  //
-  // ==========================================================
-
 
   /**
    * الحصول على مجلدات زاد الحلقات
+   *
+   * النتيجة:
+   *
+   * root
+   * folders
+   *
+   * ولن تظهر:
+   *
+   * قاعدة البيانات
+   * النسخ الاحتياطية
+   *
+   * لأنها مجلدات خاصة.
    */
+
   getDriveFolders: () =>
     request<DriveFoldersResponse>(
       'getDriveFolders',
@@ -1000,17 +1084,15 @@ export const api = {
 
 
   /**
-   * الحصول على ملفات مجلد معين
+   * الحصول على الملفات داخل مجلد معين.
    *
-   * أمثلة:
+   * مثال:
    *
    * api.getDriveFiles('pdf')
+   *
    * api.getDriveFiles('audio')
-   * api.getDriveFiles('certificates')
-   * api.getDriveFiles('studentPhotos')
-   * api.getDriveFiles('branding')
-   * api.getDriveFiles('documents')
    */
+
   getDriveFiles: (
     category: string,
   ) =>
@@ -1024,23 +1106,9 @@ export const api = {
 
 
   /**
-   * الحصول على ملف محدد
+   * معلومات مجلد معين.
    */
-  getDriveFile: (
-    fileId: string,
-  ) =>
-    request<DriveFile>(
-      'getDriveFile',
-      {
-        fileId,
-      },
-      'GET',
-    ),
 
-
-  /**
-   * الحصول على معلومات مجلد
-   */
   getDriveFolderInfo: (
     category: string,
   ) =>
@@ -1048,6 +1116,25 @@ export const api = {
       'getDriveFolderInfo',
       {
         category,
+      },
+      'GET',
+    ),
+
+
+  /**
+   * الحصول على ملف بواسطة ID.
+   *
+   * Apps Script يتحقق أولًا
+   * أن الملف داخل زاد الحلقات.
+   */
+
+  getDriveFile: (
+    fileId: string,
+  ) =>
+    request<DriveFile>(
+      'getDriveFile',
+      {
+        fileId,
       },
       'GET',
     ),
