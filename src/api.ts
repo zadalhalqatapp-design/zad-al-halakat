@@ -18,11 +18,9 @@ import type {
 } from '@/types';
 
 
-/**
- * ============================================================
- * أنواع البيانات العامة
- * ============================================================
- */
+/* ============================================================
+   أنواع عامة
+   ============================================================ */
 
 type AnyData =
   | Record<string, unknown>
@@ -34,11 +32,9 @@ type AnyData =
   | object;
 
 
-/**
- * ============================================================
- * خطأ API
- * ============================================================
- */
+/* ============================================================
+   خطأ API
+   ============================================================ */
 
 export class ApiError extends Error {
 
@@ -46,7 +42,7 @@ export class ApiError extends Error {
 
   constructor(
     message: string,
-    code?: string,
+    code?: string
   ) {
 
     super(message);
@@ -58,269 +54,19 @@ export class ApiError extends Error {
 }
 
 
-/**
- * ============================================================
- * طلب API الرئيسي
- * ============================================================
- */
+/* ============================================================
+   أنواع Google Drive
+   ============================================================ */
 
-async function request<T extends AnyData>(
-  action: string,
-  payload: Record<string, unknown> = {},
-  method: 'GET' | 'POST' = 'POST',
-): Promise<T> {
+export interface DriveRoot {
 
+  id: string;
 
-  /**
-   * ==========================================================
-   * التأكد من وجود رابط Apps Script
-   * ==========================================================
-   */
+  name: string;
 
-  if (!APPS_CONFIG.APPS_SCRIPT_URL) {
-
-    throw new ApiError(
-      'لم يتم ضبط رابط Google Apps Script. يرجى إضافته في ملف .env باسم VITE_APPS_SCRIPT_URL.',
-      'NOT_CONFIGURED',
-    );
-  }
-
-
-  /**
-   * ==========================================================
-   * قراءة جلسة المستخدم
-   * ==========================================================
-   */
-
-  const storedToken =
-    typeof localStorage !== 'undefined'
-      ? localStorage.getItem(
-          APPS_CONFIG.SESSION_KEY,
-        )
-      : null;
-
-
-  let tokenValue: string | null = null;
-
-
-  if (storedToken) {
-
-    try {
-
-      const parsed =
-        JSON.parse(storedToken) as {
-          token?: string;
-        };
-
-
-      tokenValue =
-        parsed.token ?? null;
-
-    } catch {
-
-      /**
-       * قد تكون الجلسة مخزنة كنص مباشر.
-       */
-
-      tokenValue =
-        storedToken;
-    }
-  }
-
-
-  /**
-   * ==========================================================
-   * تنفيذ الطلب
-   * ==========================================================
-   */
-
-  try {
-
-    const body =
-      JSON.stringify({
-        action,
-        ...payload,
-        token: tokenValue,
-      });
-
-
-    let response: Response;
-
-
-    /**
-     * ========================================================
-     * GET
-     * ========================================================
-     */
-
-    if (method === 'GET') {
-
-      const params =
-        new URLSearchParams({
-          payload: body,
-        });
-
-
-      response =
-        await fetch(
-          `${APPS_CONFIG.APPS_SCRIPT_URL}?${params.toString()}`,
-          {
-            method: 'GET',
-            redirect: 'follow',
-            headers: {
-              'Content-Type':
-                'text/plain;charset=utf-8',
-            },
-          },
-        );
-
-    }
-
-
-    /**
-     * ========================================================
-     * POST
-     * ========================================================
-     */
-
-    else {
-
-      response =
-        await fetch(
-          APPS_CONFIG.APPS_SCRIPT_URL,
-          {
-            method: 'POST',
-            redirect: 'follow',
-            headers: {
-              'Content-Type':
-                'text/plain;charset=utf-8',
-            },
-            body,
-          },
-        );
-    }
-
-
-    /**
-     * ========================================================
-     * قراءة الاستجابة
-     * ========================================================
-     */
-
-    const text =
-      await response.text();
-
-
-    let json: ApiResponse<T>;
-
-
-    try {
-
-      json =
-        JSON.parse(
-          text,
-        ) as ApiResponse<T>;
-
-    } catch {
-
-      console.error(
-        '[API] Parse error:',
-        action,
-        '| Raw:',
-        text.slice(0, 1000),
-      );
-
-
-      throw new ApiError(
-        'استجابة غير صالحة من الخادم.',
-        'PARSE_ERROR',
-      );
-    }
-
-
-    /**
-     * ========================================================
-     * خطأ صادر من Apps Script
-     * ========================================================
-     */
-
-    if (!json.success) {
-
-      console.error(
-        '[API] Server error:',
-        action,
-        '| Error:',
-        json.error,
-        '| Code:',
-        json.code,
-      );
-
-
-      throw new ApiError(
-        json.error ||
-          'حدث خطأ في الخادم.',
-        json.code,
-      );
-    }
-
-
-    /**
-     * ========================================================
-     * الاستجابة الناجحة
-     * ========================================================
-     */
-
-    return json.data as T;
-
-
-  } catch (err) {
-
-
-    /**
-     * لا نحول ApiError إلى NETWORK_ERROR
-     */
-
-    if (err instanceof ApiError) {
-
-      throw err;
-    }
-
-
-    console.error(
-      '[API] Network error:',
-      action,
-      '| Error:',
-      err,
-    );
-
-
-    throw new ApiError(
-      'تعذّر الاتصال بالخادم. تحقق من الاتصال بالإنترنت أو رابط Google Apps Script.',
-      'NETWORK_ERROR',
-    );
-  }
+  url?: string;
 }
 
-
-/**
- * ============================================================
- * Login
- * ============================================================
- */
-
-export interface LoginResponse {
-
-  session: Session;
-
-  user: User;
-}
-
-
-/**
- * ============================================================
- * Google Drive Types
- * ============================================================
- */
 
 export interface DriveFolder {
 
@@ -333,19 +79,14 @@ export interface DriveFolder {
   url: string;
 
   icon?: string;
+
+  public?: boolean;
 }
 
 
 export interface DriveFoldersResponse {
 
-  root: {
-
-    id: string;
-
-    name: string;
-
-    url: string;
-  };
+  root: DriveRoot;
 
   folders: DriveFolder[];
 }
@@ -398,45 +139,347 @@ export interface DriveFilesResponse {
 }
 
 
-export interface DriveFolderInfo {
+/* ============================================================
+   أنواع تسجيل الدخول
+   ============================================================ */
 
-  id: string;
+export interface LoginResponse {
 
-  name: string;
+  session: Session;
 
-  folderId: string;
-
-  url: string;
-
-  public: boolean;
-
-  icon?: string;
+  user: User;
 }
 
 
-/**
- * ============================================================
- * API
- * ============================================================
- */
+/* ============================================================
+   استخراج Token
+   ============================================================ */
+
+function getStoredToken(): string | null {
+
+  if (
+    typeof localStorage ===
+    'undefined'
+  ) {
+
+    return null;
+  }
+
+
+  const stored =
+    localStorage.getItem(
+      APPS_CONFIG.SESSION_KEY
+    );
+
+
+  if (!stored) {
+
+    return null;
+  }
+
+
+  try {
+
+    /*
+     * إذا كان التخزين:
+     *
+     * {
+     *   token: "..."
+     * }
+     */
+
+    const parsed =
+      JSON.parse(stored) as {
+        token?: string;
+      };
+
+
+    if (parsed.token) {
+
+      return parsed.token;
+    }
+
+
+    /*
+     * احتياطًا إذا كان مخزنًا
+     * كنص مباشر.
+     */
+
+    return stored;
+
+
+  } catch {
+
+    /*
+     * إذا لم يكن JSON
+     * نعتبر القيمة Token مباشرة.
+     */
+
+    return stored;
+  }
+}
+
+
+/* ============================================================
+   الطلب الرئيسي
+   ============================================================ */
+
+async function request<
+  T extends AnyData
+>(
+  action: string,
+  payload: Record<
+    string,
+    unknown
+  > = {},
+  method:
+    | 'GET'
+    | 'POST' = 'POST',
+): Promise<T> {
+
+
+  /* ----------------------------------------------------------
+     التأكد من وجود رابط Apps Script
+     ---------------------------------------------------------- */
+
+  if (
+    !APPS_CONFIG.APPS_SCRIPT_URL
+  ) {
+
+    throw new ApiError(
+      'لم يتم ضبط رابط Google Apps Script. يرجى إضافة VITE_APPS_SCRIPT_URL.',
+      'NOT_CONFIGURED'
+    );
+  }
+
+
+  /* ----------------------------------------------------------
+     Token
+     ---------------------------------------------------------- */
+
+  const token =
+    getStoredToken();
+
+
+  /* ----------------------------------------------------------
+     بناء الطلب
+     ---------------------------------------------------------- */
+
+  const requestPayload =
+    {
+      action,
+      ...payload,
+      token,
+    };
+
+
+  const body =
+    JSON.stringify(
+      requestPayload
+    );
+
+
+  try {
+
+    let response: Response;
+
+
+    /* ========================================================
+       GET
+       ======================================================== */
+
+    if (
+      method === 'GET'
+    ) {
+
+      const params =
+        new URLSearchParams();
+
+
+      params.set(
+        'payload',
+        body
+      );
+
+
+      const url =
+        `${APPS_CONFIG.APPS_SCRIPT_URL}?${params.toString()}`;
+
+
+      response =
+        await fetch(
+          url,
+          {
+            method: 'GET',
+            redirect: 'follow',
+          }
+        );
+
+
+    }
+
+
+    /* ========================================================
+       POST
+       ======================================================== */
+
+    else {
+
+      response =
+        await fetch(
+          APPS_CONFIG.APPS_SCRIPT_URL,
+          {
+            method: 'POST',
+
+            redirect: 'follow',
+
+            headers: {
+              'Content-Type':
+                'text/plain;charset=utf-8',
+            },
+
+            body,
+          }
+        );
+    }
+
+
+    /* --------------------------------------------------------
+       قراءة الاستجابة
+       -------------------------------------------------------- */
+
+    const text =
+      await response.text();
+
+
+    if (!text) {
+
+      throw new ApiError(
+        'الخادم أعاد استجابة فارغة.',
+        'EMPTY_RESPONSE'
+      );
+    }
+
+
+    let json:
+      ApiResponse<T>;
+
+
+    try {
+
+      json =
+        JSON.parse(
+          text
+        ) as ApiResponse<T>;
+
+
+    } catch (parseError) {
+
+      console.error(
+        '[API] JSON Parse Error:',
+        {
+          action,
+          text:
+            text.slice(
+              0,
+              1000
+            ),
+          parseError,
+        }
+      );
+
+
+      throw new ApiError(
+        'استجابة غير صالحة من Google Apps Script.',
+        'PARSE_ERROR'
+      );
+    }
+
+
+    /* --------------------------------------------------------
+       خطأ من Apps Script
+       -------------------------------------------------------- */
+
+    if (
+      !json.success
+    ) {
+
+      console.error(
+        '[API] Server error:',
+        {
+          action,
+          error:
+            json.error,
+          code:
+            json.code,
+        }
+      );
+
+
+      throw new ApiError(
+        json.error ||
+          'حدث خطأ في الخادم.',
+        json.code
+      );
+    }
+
+
+    return json.data;
+
+
+  } catch (err) {
+
+    /*
+     * أخطاء API الحقيقية
+     * لا نحولها إلى NETWORK_ERROR.
+     */
+
+    if (
+      err instanceof ApiError
+    ) {
+
+      throw err;
+    }
+
+
+    console.error(
+      '[API] Network error:',
+      {
+        action,
+        error: err,
+      }
+    );
+
+
+    throw new ApiError(
+      'تعذّر الاتصال بخادم Google Apps Script. تحقق من رابط النشر والاتصال بالإنترنت.',
+      'NETWORK_ERROR'
+    );
+  }
+}
+
+
+/* ============================================================
+   API
+   ============================================================ */
 
 export const api = {
 
 
-  // ==========================================================
-  // Auth
-  // ==========================================================
+  /* ==========================================================
+     Auth
+     ========================================================== */
 
   login: (
     email: string,
-    password: string,
+    password: string
   ) =>
     request<LoginResponse>(
       'login',
       {
         email,
         password,
-      },
+      }
     ),
 
 
@@ -446,127 +489,126 @@ export const api = {
       email: string;
       password: string;
       phone?: string;
-    },
+    }
   ) =>
     request(
       'register',
-      data,
+      data
     ),
 
 
   logout: () =>
     request(
-      'logout',
-      {},
+      'logout'
     ),
 
 
   verifySession: (
-    token: string,
+    token: string
   ) =>
     request<LoginResponse>(
       'verifySession',
       {
         token,
-      },
+      }
     ),
 
 
 
-  // ==========================================================
-  // Students
-  // ==========================================================
+  /* ==========================================================
+     Students
+     ========================================================== */
 
   getStudents: () =>
     request<User[]>(
       'getStudents',
       {},
-      'GET',
+      'GET'
     ),
 
 
   approveStudent: (
-    studentId: string,
+    studentId: string
   ) =>
     request(
       'approveStudent',
       {
         studentId,
-      },
+      }
     ),
 
 
   rejectStudent: (
     studentId: string,
-    reason: string,
+    reason: string
   ) =>
     request(
       'rejectStudent',
       {
         studentId,
         reason,
-      },
+      }
     ),
 
 
   suspendStudent: (
     studentId: string,
-    reason: string,
+    reason: string
   ) =>
     request(
       'suspendStudent',
       {
         studentId,
         reason,
-      },
+      }
     ),
 
 
   reinstateStudent: (
-    studentId: string,
+    studentId: string
   ) =>
     request(
       'reinstateStudent',
       {
         studentId,
-      },
+      }
     ),
 
 
   updateStudent: (
     studentId: string,
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ) =>
     request(
       'updateStudent',
       {
         studentId,
         data,
-      },
+      }
     ),
 
 
   deleteStudent: (
-    studentId: string,
+    studentId: string
   ) =>
     request(
       'deleteStudent',
       {
         studentId,
-      },
+      }
     ),
 
 
 
-  // ==========================================================
-  // Supervisors
-  // ==========================================================
+  /* ==========================================================
+     Supervisors
+     ========================================================== */
 
   getSupervisors: () =>
     request<User[]>(
       'getSupervisors',
       {},
-      'GET',
+      'GET'
     ),
 
 
@@ -576,48 +618,48 @@ export const api = {
       email: string;
       password: string;
       phone?: string;
-    },
+    }
   ) =>
     request(
       'addSupervisor',
-      data,
+      data
     ),
 
 
   updateSupervisor: (
     id: string,
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ) =>
     request(
       'updateSupervisor',
       {
         id,
         data,
-      },
+      }
     ),
 
 
   deleteSupervisor: (
-    id: string,
+    id: string
   ) =>
     request(
       'deleteSupervisor',
       {
         id,
-      },
+      }
     ),
 
 
 
-  // ==========================================================
-  // Admins
-  // ==========================================================
+  /* ==========================================================
+     Admins
+     ========================================================== */
 
   getAdmins: () =>
     request<User[]>(
       'getAdmins',
       {},
-      'GET',
+      'GET'
     ),
 
 
@@ -627,110 +669,110 @@ export const api = {
       email: string;
       password: string;
       phone?: string;
-    },
+    }
   ) =>
     request(
       'addAdmin',
-      data,
+      data
     ),
 
 
   updateAdmin: (
     id: string,
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ) =>
     request(
       'updateAdmin',
       {
         id,
         data,
-      },
+      }
     ),
 
 
   deleteAdmin: (
-    id: string,
+    id: string
   ) =>
     request(
       'deleteAdmin',
       {
         id,
-      },
+      }
     ),
 
 
 
-  // ==========================================================
-  // Hadiths
-  // ==========================================================
+  /* ==========================================================
+     Hadiths
+     ========================================================== */
 
   getHadiths: () =>
     request<Hadith[]>(
       'getHadiths',
       {},
-      'GET',
+      'GET'
     ),
 
 
   getHadith: (
-    hadithId: string,
+    hadithId: string
   ) =>
     request<Hadith>(
       'getHadith',
       {
         hadithId,
       },
-      'GET',
+      'GET'
     ),
 
 
   addHadith: (
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ) =>
     request(
       'addHadith',
-      data,
+      data
     ),
 
 
   updateHadith: (
     hadithId: string,
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ) =>
     request(
       'updateHadith',
       {
         hadithId,
         data,
-      },
+      }
     ),
 
 
   deleteHadith: (
-    hadithId: string,
+    hadithId: string
   ) =>
     request(
       'deleteHadith',
       {
         hadithId,
-      },
+      }
     ),
 
 
 
-  // ==========================================================
-  // Progress
-  // ==========================================================
+  /* ==========================================================
+     Progress
+     ========================================================== */
 
   getProgress: (
-    studentId: string,
+    studentId: string
   ) =>
     request<ProgressRecord[]>(
       'getProgress',
       {
         studentId,
       },
-      'GET',
+      'GET'
     ),
 
 
@@ -740,7 +782,7 @@ export const api = {
       | 'memorized'
       | 'listened'
       | 'read',
-    value: boolean,
+    value: boolean
   ) =>
     request(
       'saveProgress',
@@ -748,7 +790,7 @@ export const api = {
         hadithId,
         field,
         value,
-      },
+      }
     ),
 
 
@@ -758,19 +800,15 @@ export const api = {
       | 'video'
       | 'audio'
       | 'pdf',
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ) =>
-    request<{
-      success: boolean;
-      completed: boolean;
-      threshold: number;
-    }>(
+    request(
       'saveMediaProgress',
       {
         hadithId,
         mediaType,
         data,
-      },
+      }
     ),
 
 
@@ -778,110 +816,110 @@ export const api = {
     request<DailyLesson>(
       'getDailyLessons',
       {},
-      'GET',
+      'GET'
     ),
 
 
 
-  // ==========================================================
-  // Cycles
-  // ==========================================================
+  /* ==========================================================
+     Cycles
+     ========================================================== */
 
   getCycles: () =>
     request<Cycle[]>(
       'getCycles',
       {},
-      'GET',
+      'GET'
     ),
 
 
   startCycle: (
     name: string,
-    studentIds: string[],
+    studentIds: string[]
   ) =>
     request(
       'startCycle',
       {
         name,
         studentIds,
-      },
+      }
     ),
 
 
   completeCycle: (
-    cycleId: string,
+    cycleId: string
   ) =>
     request(
       'completeCycle',
       {
         cycleId,
-      },
+      }
     ),
 
 
 
-  // ==========================================================
-  // Certificates
-  // ==========================================================
+  /* ==========================================================
+     Certificates
+     ========================================================== */
 
   getCertificates: (
-    studentId?: string,
+    studentId?: string
   ) =>
     request<Certificate[]>(
       'getCertificates',
       {
         studentId,
       },
-      'GET',
+      'GET'
     ),
 
 
   issueCertificate: (
     studentId: string,
-    cycleId: string,
+    cycleId: string
   ) =>
     request(
       'issueCertificate',
       {
         studentId,
         cycleId,
-      },
+      }
     ),
 
 
   downloadCertificate: (
-    certificateId: string,
+    certificateId: string
   ) =>
     request(
       'downloadCertificate',
       {
         certificateId,
       },
-      'GET',
+      'GET'
     ),
 
 
 
-  // ==========================================================
-  // Messages
-  // ==========================================================
+  /* ==========================================================
+     Messages
+     ========================================================== */
 
   getMessages: (
-    userId: string,
+    userId: string
   ) =>
     request<Message[]>(
       'getMessages',
       {
         userId,
       },
-      'GET',
+      'GET'
     ),
 
 
   sendMessage: (
     toId: string,
     subject: string,
-    body: string,
+    body: string
   ) =>
     request(
       'sendMessage',
@@ -889,31 +927,31 @@ export const api = {
         toId,
         subject,
         body,
-      },
+      }
     ),
 
 
   markMessageRead: (
-    messageId: string,
+    messageId: string
   ) =>
     request(
       'markMessageRead',
       {
         messageId,
-      },
+      }
     ),
 
 
 
-  // ==========================================================
-  // Notifications
-  // ==========================================================
+  /* ==========================================================
+     Notifications
+     ========================================================== */
 
   getNotifications: () =>
     request<Notification[]>(
       'getNotifications',
       {},
-      'GET',
+      'GET'
     ),
 
 
@@ -923,228 +961,236 @@ export const api = {
       body: string;
       target: string;
       targetId?: string;
-    },
+    }
   ) =>
     request(
       'sendNotification',
-      data,
+      data
     ),
 
 
 
-  // ==========================================================
-  // Profile
-  // ==========================================================
+  /* ==========================================================
+     Profile
+     ========================================================== */
 
   updateProfile: (
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ) =>
     request(
       'updateProfile',
-      data,
+      data
     ),
 
 
   changePassword: (
     oldPassword: string,
-    newPassword: string,
+    newPassword: string
   ) =>
     request(
       'changePassword',
       {
         oldPassword,
         newPassword,
-      },
+      }
     ),
 
 
   resetPassword: (
-    studentId: string,
+    studentId: string
   ) =>
     request(
       'resetPassword',
       {
         studentId,
-      },
+      }
     ),
 
 
 
-  // ==========================================================
-  // Dashboard
-  // ==========================================================
+  /* ==========================================================
+     Dashboard
+     ========================================================== */
 
   getDashboard: () =>
     request<DashboardData>(
       'getDashboard',
       {},
-      'GET',
+      'GET'
     ),
 
 
 
-  // ==========================================================
-  // Settings
-  // ==========================================================
+  /* ==========================================================
+     Settings
+     ========================================================== */
 
   getSettings: () =>
     request<AppSettings>(
       'getSettings',
       {},
-      'GET',
+      'GET'
     ),
 
 
   updateSettings: (
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ) =>
     request(
       'updateSettings',
       {
         data,
-      },
+      }
     ),
 
 
 
-  // ==========================================================
-  // Operation Log
-  // ==========================================================
+  /* ==========================================================
+     Operation Log
+     ========================================================== */
 
   getOperationLog: () =>
     request<OperationLog[]>(
       'getOperationLog',
       {},
-      'GET',
+      'GET'
     ),
 
 
 
-  // ==========================================================
-  // Backups
-  // ==========================================================
+  /* ==========================================================
+     Backups
+     ========================================================== */
 
   getBackups: () =>
     request<Backup[]>(
       'getBackups',
       {},
-      'GET',
+      'GET'
     ),
 
 
   backupDatabase: (
-    name: string,
+    name: string
   ) =>
     request(
       'backupDatabase',
       {
         name,
-      },
+      }
     ),
 
 
   restoreBackup: (
-    backupId: string,
+    backupId: string
   ) =>
     request(
       'restoreBackup',
       {
         backupId,
-      },
+      }
     ),
 
 
 
-  // ==========================================================
-  // Google Drive
-  // ==========================================================
+  /* ==========================================================
+     GOOGLE DRIVE
+     ========================================================== */
+
 
   /**
-   * الحصول على مجلدات زاد الحلقات
-   *
-   * النتيجة:
-   *
-   * root
-   * folders
-   *
-   * ولن تظهر:
-   *
-   * قاعدة البيانات
-   * النسخ الاحتياطية
-   *
-   * لأنها مجلدات خاصة.
+   * جلب مجلدات زاد الحلقات
    */
-
   getDriveFolders: () =>
     request<DriveFoldersResponse>(
       'getDriveFolders',
       {},
-      'GET',
+      'GET'
     ),
 
 
   /**
-   * الحصول على الملفات داخل مجلد معين.
-   *
-   * مثال:
-   *
-   * api.getDriveFiles('pdf')
-   *
-   * api.getDriveFiles('audio')
+   * جلب الملفات داخل مجلد
    */
-
   getDriveFiles: (
-    category: string,
+    category: string
   ) =>
     request<DriveFilesResponse>(
       'getDriveFiles',
       {
         category,
       },
-      'GET',
+      'GET'
     ),
 
 
   /**
-   * معلومات مجلد معين.
+   * معلومات مجلد
    */
-
   getDriveFolderInfo: (
-    category: string,
+    category: string
   ) =>
-    request<DriveFolderInfo>(
+    request<DriveFolder>(
       'getDriveFolderInfo',
       {
         category,
       },
-      'GET',
+      'GET'
     ),
 
 
   /**
-   * الحصول على ملف بواسطة ID.
-   *
-   * Apps Script يتحقق أولًا
-   * أن الملف داخل زاد الحلقات.
+   * الحصول على ملف محدد
    */
-
   getDriveFile: (
-    fileId: string,
+    fileId: string
   ) =>
     request<DriveFile>(
       'getDriveFile',
       {
         fileId,
       },
-      'GET',
+      'GET'
+    ),
+
+
+  /**
+   * اختبار المجلد الرئيسي
+   */
+  testDriveRoot: () =>
+    request(
+      'testDriveRoot',
+      {},
+      'GET'
+    ),
+
+
+  /**
+   * فحص بنية المجلدات
+   */
+  setupDriveFolders: () =>
+    request(
+      'setupDriveFolders',
+      {},
+      'GET'
+    ),
+
+
+  /**
+   * فحص جميع مجلدات Drive
+   */
+  testAllDriveFolders: () =>
+    request(
+      'testAllDriveFolders',
+      {},
+      'GET'
     ),
 };
 
 
-/**
- * ============================================================
- * نوع API
- * ============================================================
- */
+/* ============================================================
+   نوع API
+   ============================================================ */
 
-export type Api = typeof api;
+export type Api =
+  typeof api;
