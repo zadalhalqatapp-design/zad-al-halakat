@@ -1,78 +1,97 @@
 /**
  * ============================================================
- * زاد الحلقات — Google Apps Script
+ * زاد الحلقات — Google Apps Script Backend
  * Code.gs
  * ============================================================
  *
- * نقطة الدخول الرئيسية للـ Web App
+ * نقطة الدخول الرئيسية للويب أب
  *
- * المسؤوليات:
- * - استقبال GET / POST
- * - قراءة action
- * - التحقق من الجلسة
- * - توجيه الطلب إلى الدالة المناسبة
- * - ربط Google Drive
+ * يدعم:
+ * - Authentication
+ * - Students
+ * - Supervisors
+ * - Admins
+ * - Hadiths
+ * - Progress
+ * - Cycles
+ * - Certificates
+ * - Messages
+ * - Notifications
+ * - Profile
+ * - Settings
+ * - Operation Log
+ * - Backups
+ * - Google Drive
  *
- * الملفات الأخرى:
- * Auth.gs
- * Communication.gs
- * Config.gs
- * Cycles.gs
- * Hadiths.gs
- * Management.gs
- * Setup.gs
- * Staff.gs
- * Students.gs
- * Utils.gs
- * Drive.gs
+ * Google Drive:
+ * جميع عمليات الملفات تمر من خلال Drive.gs
+ * ومقيدة بمجلد:
+ *
+ * 📁 زاد الحلقات
+ *
  * ============================================================
  */
 
 
-/* ============================================================
-   GET
-   ============================================================ */
-
+/**
+ * ============================================================
+ * GET
+ * ============================================================
+ */
 function doGet(e) {
   return handleRequest(e, 'GET');
 }
 
 
-/* ============================================================
-   POST
-   ============================================================ */
-
+/**
+ * ============================================================
+ * POST
+ * ============================================================
+ */
 function doPost(e) {
   return handleRequest(e, 'POST');
 }
 
 
-/* ============================================================
-   المعالج الرئيسي
-   ============================================================ */
-
+/**
+ * ============================================================
+ * المعالج الرئيسي
+ * ============================================================
+ */
 function handleRequest(e, method) {
 
   var payload = {};
 
   try {
 
-    /* --------------------------------------------------------
-       قراءة البيانات
-       -------------------------------------------------------- */
-
+    /**
+     * ----------------------------------------
+     * GET
+     * ----------------------------------------
+     *
+     * مثال:
+     *
+     * ?payload={"action":"getDriveFolders","token":"..."}
+     */
     if (method === 'GET') {
 
-      var rawPayload =
+      var param =
         e &&
         e.parameter &&
         e.parameter.payload;
 
-      if (rawPayload) {
-        payload = JSON.parse(rawPayload);
+      if (param) {
+        payload = JSON.parse(param);
       }
 
-    } else {
+    }
+
+    /**
+     * ----------------------------------------
+     * POST
+     * ----------------------------------------
+     */
+    else {
 
       var body =
         e &&
@@ -82,6 +101,7 @@ function handleRequest(e, method) {
       if (body) {
         payload = JSON.parse(body);
       }
+
     }
 
   } catch (err) {
@@ -93,11 +113,11 @@ function handleRequest(e, method) {
   }
 
 
-  /* ----------------------------------------------------------
-     التأكد من وجود action
-     ---------------------------------------------------------- */
-
-  var action = payload.action;
+  /**
+   * التأكد من وجود العملية
+   */
+  var action =
+    payload.action;
 
   if (!action) {
 
@@ -108,39 +128,51 @@ function handleRequest(e, method) {
   }
 
 
-  /* ----------------------------------------------------------
-     العمليات العامة
-     ---------------------------------------------------------- */
+  /**
+   * ========================================================
+   * العمليات العامة التي لا تحتاج جلسة
+   * ========================================================
+   */
 
   var publicActions = [
+
     'login',
+
     'register',
-    'verifySession'
+
+    'verifySession',
+
+    /**
+     * اختبار الاتصال
+     */
+    'test',
+
+    /**
+     * اختبار Google Drive الرئيسي
+     *
+     * لا نستخدمه من الواجهة العامة عادة،
+     * لكنه مفيد للاختبار.
+     */
+    'testDriveRoot'
+
   ];
 
 
-  /* ----------------------------------------------------------
-     التحقق من الجلسة
-     ---------------------------------------------------------- */
+  /**
+   * ========================================================
+   * التحقق من الجلسة
+   * ========================================================
+   */
 
-  if (publicActions.indexOf(action) === -1) {
+  if (
+    publicActions.indexOf(action) === -1
+  ) {
 
-    var token = payload.token;
+    var token =
+      payload.token;
 
-    var session;
-
-    try {
-
-      session = verifyToken(token);
-
-    } catch (err) {
-
-      return jsonError(
-        err.message || 'تعذر التحقق من الجلسة.',
-        err.code || 'UNAUTHORIZED'
-      );
-    }
-
+    var session =
+      verifyToken(token);
 
     if (!session) {
 
@@ -150,14 +182,16 @@ function handleRequest(e, method) {
       );
     }
 
-
-    payload._session = session;
+    payload._session =
+      session;
   }
 
 
-  /* ----------------------------------------------------------
-     تنفيذ العملية
-     ---------------------------------------------------------- */
+  /**
+   * ========================================================
+   * تنفيذ العملية
+   * ========================================================
+   */
 
   try {
 
@@ -167,7 +201,9 @@ function handleRequest(e, method) {
         payload
       );
 
-    return jsonSuccess(result);
+    return jsonSuccess(
+      result
+    );
 
   } catch (err) {
 
@@ -177,29 +213,50 @@ function handleRequest(e, method) {
     );
 
     return jsonError(
-      err.message ||
-        'حدث خطأ غير معروف في الخادم.',
-      err.code ||
-        'SERVER_ERROR'
+      err &&
+      err.message
+        ? err.message
+        : 'حدث خطأ غير معروف.',
+      err &&
+      err.code
+        ? err.code
+        : 'SERVER_ERROR'
     );
   }
 }
 
 
-/* ============================================================
-   توجيه العمليات
-   ============================================================ */
-
+/**
+ * ============================================================
+ * توجيه العمليات
+ * ============================================================
+ */
 function routeAction(action, p) {
 
   switch (action) {
 
+    /**
+     * ========================================================
+     * اختبار الاتصال
+     * ========================================================
+     */
 
-    /* ========================================================
-       المصادقة
-       ======================================================== */
+    case 'test':
+
+      return {
+        status: 'OK',
+        message: 'تم الاتصال بـ Google Apps Script بنجاح.'
+      };
+
+
+    /**
+     * ========================================================
+     * Authentication
+     * ========================================================
+     */
 
     case 'login':
+
       return login(
         p.email,
         p.password
@@ -207,44 +264,52 @@ function routeAction(action, p) {
 
 
     case 'register':
+
       return register(
         p
       );
 
 
     case 'logout':
+
       return logout(
         p.token
       );
 
 
     case 'verifySession':
+
       return verifySession(
         p.token
       );
 
 
-
-    /* ========================================================
-       لوحة التحكم
-       ======================================================== */
+    /**
+     * ========================================================
+     * Dashboard
+     * ========================================================
+     */
 
     case 'getDashboard':
+
       return getDashboard(
         p._session
       );
 
 
-
-    /* ========================================================
-       الطلاب
-       ======================================================== */
+    /**
+     * ========================================================
+     * Students
+     * ========================================================
+     */
 
     case 'getStudents':
+
       return getStudents();
 
 
     case 'approveStudent':
+
       return approveStudent(
         p.studentId,
         p._session
@@ -252,6 +317,7 @@ function routeAction(action, p) {
 
 
     case 'rejectStudent':
+
       return rejectStudent(
         p.studentId,
         p.reason,
@@ -260,6 +326,7 @@ function routeAction(action, p) {
 
 
     case 'suspendStudent':
+
       return suspendStudent(
         p.studentId,
         p.reason,
@@ -268,6 +335,7 @@ function routeAction(action, p) {
 
 
     case 'reinstateStudent':
+
       return reinstateStudent(
         p.studentId,
         p._session
@@ -275,6 +343,7 @@ function routeAction(action, p) {
 
 
     case 'updateStudent':
+
       return updateStudent(
         p.studentId,
         p.data,
@@ -283,22 +352,26 @@ function routeAction(action, p) {
 
 
     case 'deleteStudent':
+
       return deleteStudent(
         p.studentId,
         p._session
       );
 
 
-
-    /* ========================================================
-       المشرفون
-       ======================================================== */
+    /**
+     * ========================================================
+     * Supervisors
+     * ========================================================
+     */
 
     case 'getSupervisors':
+
       return getSupervisors();
 
 
     case 'addSupervisor':
+
       return addSupervisor(
         p,
         p._session
@@ -306,6 +379,7 @@ function routeAction(action, p) {
 
 
     case 'updateSupervisor':
+
       return updateSupervisor(
         p.id,
         p.data,
@@ -314,22 +388,26 @@ function routeAction(action, p) {
 
 
     case 'deleteSupervisor':
+
       return deleteSupervisor(
         p.id,
         p._session
       );
 
 
-
-    /* ========================================================
-       المديرون
-       ======================================================== */
+    /**
+     * ========================================================
+     * Admins
+     * ========================================================
+     */
 
     case 'getAdmins':
+
       return getAdmins();
 
 
     case 'addAdmin':
+
       return addAdmin(
         p,
         p._session
@@ -337,6 +415,7 @@ function routeAction(action, p) {
 
 
     case 'updateAdmin':
+
       return updateAdmin(
         p.id,
         p.data,
@@ -345,28 +424,33 @@ function routeAction(action, p) {
 
 
     case 'deleteAdmin':
+
       return deleteAdmin(
         p.id,
         p._session
       );
 
 
-
-    /* ========================================================
-       الأحاديث
-       ======================================================== */
+    /**
+     * ========================================================
+     * Hadiths
+     * ========================================================
+     */
 
     case 'getHadiths':
+
       return getHadiths();
 
 
     case 'getHadith':
+
       return getHadith(
         p.hadithId
       );
 
 
     case 'addHadith':
+
       return addHadith(
         p,
         p._session
@@ -374,6 +458,7 @@ function routeAction(action, p) {
 
 
     case 'updateHadith':
+
       return updateHadith(
         p.hadithId,
         p.data,
@@ -382,24 +467,28 @@ function routeAction(action, p) {
 
 
     case 'deleteHadith':
+
       return deleteHadith(
         p.hadithId,
         p._session
       );
 
 
-
-    /* ========================================================
-       الإنجاز
-       ======================================================== */
+    /**
+     * ========================================================
+     * Progress
+     * ========================================================
+     */
 
     case 'getProgress':
+
       return getProgress(
         p.studentId
       );
 
 
     case 'saveProgress':
+
       return saveProgress(
         p.hadithId,
         p.field,
@@ -409,6 +498,7 @@ function routeAction(action, p) {
 
 
     case 'saveMediaProgress':
+
       return saveMediaProgress(
         p.hadithId,
         p.mediaType,
@@ -418,21 +508,25 @@ function routeAction(action, p) {
 
 
     case 'getDailyLessons':
+
       return getDailyLessons(
         p._session
       );
 
 
-
-    /* ========================================================
-       الدورات
-       ======================================================== */
+    /**
+     * ========================================================
+     * Cycles
+     * ========================================================
+     */
 
     case 'getCycles':
+
       return getCycles();
 
 
     case 'startCycle':
+
       return startCycle(
         p.name,
         p.studentIds,
@@ -441,24 +535,28 @@ function routeAction(action, p) {
 
 
     case 'completeCycle':
+
       return completeCycle(
         p.cycleId,
         p._session
       );
 
 
-
-    /* ========================================================
-       الشهادات
-       ======================================================== */
+    /**
+     * ========================================================
+     * Certificates
+     * ========================================================
+     */
 
     case 'getCertificates':
+
       return getCertificates(
         p.studentId
       );
 
 
     case 'issueCertificate':
+
       return issueCertificate(
         p.studentId,
         p.cycleId,
@@ -467,23 +565,27 @@ function routeAction(action, p) {
 
 
     case 'downloadCertificate':
+
       return downloadCertificate(
         p.certificateId
       );
 
 
-
-    /* ========================================================
-       الرسائل
-       ======================================================== */
+    /**
+     * ========================================================
+     * Messages
+     * ========================================================
+     */
 
     case 'getMessages':
+
       return getMessages(
         p.userId
       );
 
 
     case 'sendMessage':
+
       return sendMessage(
         p.toId,
         p.subject,
@@ -493,34 +595,40 @@ function routeAction(action, p) {
 
 
     case 'markMessageRead':
+
       return markMessageRead(
         p.messageId,
         p._session
       );
 
 
-
-    /* ========================================================
-       الإشعارات
-       ======================================================== */
+    /**
+     * ========================================================
+     * Notifications
+     * ========================================================
+     */
 
     case 'getNotifications':
+
       return getNotifications();
 
 
     case 'sendNotification':
+
       return sendNotification(
         p,
         p._session
       );
 
 
-
-    /* ========================================================
-       الملف الشخصي
-       ======================================================== */
+    /**
+     * ========================================================
+     * Profile
+     * ========================================================
+     */
 
     case 'updateProfile':
+
       return updateProfile(
         p,
         p._session
@@ -528,6 +636,7 @@ function routeAction(action, p) {
 
 
     case 'changePassword':
+
       return changePassword(
         p.oldPassword,
         p.newPassword,
@@ -536,47 +645,56 @@ function routeAction(action, p) {
 
 
     case 'resetPassword':
+
       return resetPassword(
         p.studentId,
         p._session
       );
 
 
-
-    /* ========================================================
-       الإعدادات
-       ======================================================== */
+    /**
+     * ========================================================
+     * Settings
+     * ========================================================
+     */
 
     case 'getSettings':
+
       return getSettings();
 
 
     case 'updateSettings':
+
       return updateSettings(
         p.data,
         p._session
       );
 
 
-
-    /* ========================================================
-       سجل العمليات
-       ======================================================== */
+    /**
+     * ========================================================
+     * Operation Log
+     * ========================================================
+     */
 
     case 'getOperationLog':
+
       return getOperationLog();
 
 
-
-    /* ========================================================
-       النسخ الاحتياطية
-       ======================================================== */
+    /**
+     * ========================================================
+     * Backups
+     * ========================================================
+     */
 
     case 'getBackups':
+
       return getBackups();
 
 
     case 'backupDatabase':
+
       return backupDatabase(
         p.name,
         p._session
@@ -584,36 +702,59 @@ function routeAction(action, p) {
 
 
     case 'restoreBackup':
+
       return restoreBackup(
         p.backupId,
         p._session
       );
 
 
+    /**
+     * ========================================================
+     * GOOGLE DRIVE
+     * ========================================================
+     *
+     * هذه هي الإضافات المهمة.
+     *
+     * الصفحة تطلب:
+     *
+     * getDriveFolders
+     *
+     * getDriveFiles
+     *
+     * getDriveFolderInfo
+     *
+     * لذلك يجب أن تكون هنا.
+     * ========================================================
+     */
 
-    /* ========================================================
-       GOOGLE DRIVE
-       ======================================================== */
 
-    /*
-     * جلب مجلدات زاد الحلقات
+    /**
+     * جلب المجلدات العامة
+     *
+     * من داخل:
+     *
+     * 📁 زاد الحلقات
      */
     case 'getDriveFolders':
 
       return getDriveFolders();
 
 
-
-    /*
-     * جلب الملفات من مجلد معين
+    /**
+     * جلب الملفات داخل مجلد معين
      *
      * مثال:
+     *
      * category = pdf
-     * category = audio
-     * category = certificates
-     * category = studentPhotos
-     * category = branding
-     * category = documents
+     *
+     * أو:
+     *
+     * audio
+     * certificates
+     * studentPhotos
+     * branding
+     * documents
      */
     case 'getDriveFiles':
 
@@ -622,9 +763,8 @@ function routeAction(action, p) {
       );
 
 
-
-    /*
-     * معلومات مجلد
+    /**
+     * معلومات مجلد معين
      */
     case 'getDriveFolderInfo':
 
@@ -633,9 +773,8 @@ function routeAction(action, p) {
       );
 
 
-
-    /*
-     * ملف محدد
+    /**
+     * جلب ملف محدد
      */
     case 'getDriveFile':
 
@@ -644,47 +783,52 @@ function routeAction(action, p) {
       );
 
 
-
-    /* ========================================================
-       اختبارات Google Drive
-       ======================================================== */
-
-    case 'testDriveRoot':
-
-      return testDriveRoot();
-
-
-
+    /**
+     * فحص بنية Drive
+     *
+     * للاختبار فقط.
+     */
     case 'setupDriveFolders':
 
       return setupDriveFolders();
 
 
+    /**
+     * اختبار الوصول للمجلد الرئيسي
+     */
+    case 'testDriveRoot':
 
+      return testDriveRoot();
+
+
+    /**
+     * اختبار جميع مجلدات Drive
+     */
     case 'testAllDriveFolders':
 
       return testAllDriveFolders();
 
 
-
-    /* ========================================================
-       عملية غير معروفة
-       ======================================================== */
+    /**
+     * ========================================================
+     * عملية غير معروفة
+     * ========================================================
+     */
 
     default:
 
       throw new Error(
-        'عملية غير معروفة: ' +
-        action
+        'عملية غير معروفة: ' + action
       );
   }
 }
 
 
-/* ============================================================
-   استجابة ناجحة
-   ============================================================ */
-
+/**
+ * ============================================================
+ * استجابة ناجحة
+ * ============================================================
+ */
 function jsonSuccess(data) {
 
   return ContentService
@@ -700,14 +844,12 @@ function jsonSuccess(data) {
 }
 
 
-/* ============================================================
-   استجابة خطأ
-   ============================================================ */
-
-function jsonError(
-  message,
-  code
-) {
+/**
+ * ============================================================
+ * استجابة خطأ
+ * ============================================================
+ */
+function jsonError(message, code) {
 
   return ContentService
     .createTextOutput(
@@ -723,96 +865,63 @@ function jsonError(
 }
 
 
-/* ============================================================
-   تسجيل الأخطاء
-   ============================================================ */
-
-function logError(
-  action,
-  err
-) {
+/**
+ * ============================================================
+ * تسجيل الأخطاء
+ * ============================================================
+ */
+function logError(action, err) {
 
   try {
-
-    if (
-      typeof getSpreadsheet !==
-      'function'
-    ) {
-      return;
-    }
-
 
     var ss =
       getSpreadsheet();
 
-
     if (!ss) {
       return;
     }
-
-
-    if (
-      typeof SHEETS ===
-      'undefined'
-    ) {
-      return;
-    }
-
-
-    if (
-      !SHEETS.OPERATION_LOG
-    ) {
-      return;
-    }
-
 
     var sheet =
       ss.getSheetByName(
         SHEETS.OPERATION_LOG
       );
 
-
     if (!sheet) {
       return;
     }
 
-
-    var errorMessage =
-      err &&
-      err.message
-        ? err.message
-        : String(err);
-
-
-    var id =
-      typeof uuid === 'function'
-        ? uuid()
-        : Utilities.getUuid();
-
-
     sheet.appendRow([
-      id,
+
+      uuid(),
+
       new Date().toISOString(),
+
       'system',
+
       'النظام',
+
       'system',
+
       'خطأ',
+
       'العملية: ' +
         action +
         ' — الخطأ: ' +
-        errorMessage
-    ]);
+        (
+          err &&
+          err.message
+            ? err.message
+            : String(err)
+        )
 
+    ]);
 
   } catch (e) {
 
-    /*
-     * لا نوقف الطلب إذا فشل تسجيل الخطأ.
+    /**
+     * لا نسمح لفشل تسجيل الخطأ
+     * بإيقاف الاستجابة الأصلية.
      */
 
-    console.error(
-      'logError failed:',
-      e
-    );
   }
 }
