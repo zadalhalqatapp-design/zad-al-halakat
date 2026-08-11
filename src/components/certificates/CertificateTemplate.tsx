@@ -5,10 +5,12 @@ import './CertificateTemplate.css';
 
 interface CertificateTemplateProps {
   certificate: Certificate;
+  preview?: boolean;
 }
 
 export function CertificateTemplate({
   certificate,
+  preview = false,
 }: CertificateTemplateProps) {
   const [qrCode, setQrCode] = useState('');
 
@@ -18,21 +20,24 @@ export function CertificateTemplate({
     const generateQR = async () => {
       try {
         const verificationData = JSON.stringify({
-          id: certificate.id,
-          number: certificate.certificateNumber,
+          id: certificate.id || 'preview',
+          number:
+            certificate.certificateNumber ||
+            'PREVIEW',
           student: certificate.studentName,
           cycle: certificate.cycleName,
           issueDate: certificate.issueDate,
         });
 
-        const dataUrl = await QRCode.toDataURL(
-          verificationData,
-          {
-            width: 500,
-            margin: 1,
-            errorCorrectionLevel: 'H',
-          },
-        );
+        const dataUrl =
+          await QRCode.toDataURL(
+            verificationData,
+            {
+              width: 500,
+              margin: 1,
+              errorCorrectionLevel: 'H',
+            },
+          );
 
         if (mounted) {
           setQrCode(dataUrl);
@@ -58,18 +63,19 @@ export function CertificateTemplate({
       dir="rtl"
     >
       <div className="certificate">
-        {/* =========================================
-            الزخارف
-        ========================================= */}
 
+        {/* علامة المعاينة */}
+        {preview && (
+          <div className="certificate-preview-badge">
+            معاينة قبل الاعتماد
+          </div>
+        )}
+
+        {/* الزوايا */}
         <div className="certificate-corner certificate-corner-top-right" />
         <div className="certificate-corner certificate-corner-top-left" />
         <div className="certificate-corner certificate-corner-bottom-right" />
         <div className="certificate-corner certificate-corner-bottom-left" />
-
-        {/* =========================================
-            المحتوى الرئيسي
-        ========================================= */}
 
         <div className="certificate-content">
 
@@ -82,7 +88,7 @@ export function CertificateTemplate({
             />
           </div>
 
-          {/* اسم المؤسسة */}
+          {/* اسم البرنامج */}
           <div className="certificate-brand">
             زاد الحلقات
           </div>
@@ -98,24 +104,23 @@ export function CertificateTemplate({
             <span />
           </div>
 
-          {/* النص */}
+          {/* المقدمة */}
           <p className="certificate-introduction">
             تشهد إدارة <strong>زاد الحلقات</strong> بأن
           </p>
 
-          {/* اسم الطالب */}
+          {/* الطالب */}
           <h2 className="certificate-student-name">
             {certificate.studentName}
           </h2>
 
           <div className="certificate-name-line" />
 
-          {/* وصف الشهادة */}
           <p className="certificate-description">
             قد أتم بنجاح برنامج
           </p>
 
-          {/* اسم الدورة */}
+          {/* الدورة */}
           <div className="certificate-cycle">
             {certificate.cycleName}
           </div>
@@ -123,15 +128,15 @@ export function CertificateTemplate({
           {/* نسبة الإنجاز */}
           <div className="certificate-progress">
             <span>نسبة الإنجاز</span>
+
             <strong>
-              {certificate.progressPercent}%
+              {preview
+                ? 'تحدد عند الاعتماد'
+                : `${certificate.progressPercent}%`}
             </strong>
           </div>
 
-          {/* =========================================
-              معلومات الشهادة
-          ========================================= */}
-
+          {/* التفاصيل */}
           <div className="certificate-details">
 
             <div className="certificate-detail">
@@ -143,7 +148,9 @@ export function CertificateTemplate({
                 className="certificate-detail-value certificate-number"
                 dir="ltr"
               >
-                {certificate.certificateNumber}
+                {preview
+                  ? 'يحدد عند الاعتماد'
+                  : certificate.certificateNumber}
               </strong>
             </div>
 
@@ -153,16 +160,15 @@ export function CertificateTemplate({
               </span>
 
               <strong className="certificate-detail-value">
-                {certificate.issueDate}
+                {preview
+                  ? 'يحدد عند الاعتماد'
+                  : certificate.issueDate}
               </strong>
             </div>
 
           </div>
 
-          {/* =========================================
-              أسفل الشهادة
-          ========================================= */}
-
+          {/* الأسفل */}
           <div className="certificate-footer">
 
             {/* QR */}
@@ -180,15 +186,19 @@ export function CertificateTemplate({
               )}
 
               <span>
-                رمز التحقق
+                {preview
+                  ? 'رمز معاينة'
+                  : 'رمز التحقق'}
               </span>
             </div>
 
             {/* الختم */}
             <div className="certificate-seal">
               <div className="certificate-seal-inner">
-                <span>شهادة</span>
-                <strong>معتمدة</strong>
+                <span>زاد الحلقات</span>
+                <strong>
+                  {preview ? 'معاينة' : 'معتمدة'}
+                </strong>
               </div>
             </div>
 
@@ -203,13 +213,14 @@ export function CertificateTemplate({
 
           </div>
 
-          {/* رقم داخلي */}
-          <div
-            className="certificate-id"
-            dir="ltr"
-          >
-            {certificate.certificateNumber}
-          </div>
+          {!preview && (
+            <div
+              className="certificate-id"
+              dir="ltr"
+            >
+              {certificate.certificateNumber}
+            </div>
+          )}
 
         </div>
       </div>
