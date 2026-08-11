@@ -710,4 +710,37 @@
     size: A4 landscape;
     margin: 0;
   }
+}/* =========================================================
+   شارة المعاينة
+========================================================= */
+
+.certificate-preview-badge {
+  position: absolute;
+
+  top: 18mm;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  z-index: 20;
+
+  background: #be8b2b;
+  color: white;
+
+  padding: 2mm 8mm;
+
+  border-radius: 20mm;
+
+  font-size: 9pt;
+  font-weight: 700;
+
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* لا تظهر شارة المعاينة عند الطباعة */
+@media print {
+  .certificate-preview-badge {
+    display: none !important;
+  }
 }
