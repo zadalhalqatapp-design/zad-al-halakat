@@ -3,19 +3,19 @@ import { api } from '@/api';
 import { useAuth } from '@/auth/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card } from '@/components/ui/Card';
+import { Card, CardHeader } from '@/components/ui/Card';
 import { EmptyState, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Certificate } from '@/types';
 import { Award, Download, CheckCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
 
 export function StudentCertificates() {
   const { user } = useAuth();
   const { notify } = useToast();
-
-  const { data, loading } = useAsync(
+  const { data, loading, reload } = useAsync(
     () => api.getCertificates(user!.id) as Promise<Certificate[]>,
     [user?.id],
   );
@@ -23,369 +23,102 @@ export function StudentCertificates() {
   const certificates = data || [];
 
   const generatePDF = async (cert: Certificate) => {
+    // jsPDF's built-in fonts (helvetica etc.) only cover Latin glyphs and
+    // cannot shape/join Arabic letters, so drawing Arabic text directly
+    // with pdf.text() renders as boxes/garbled symbols. Instead we render
+    // the certificate as real HTML (the browser shapes Arabic correctly,
+    // same as the rest of the RTL app), rasterize it with html2canvas,
+    // and drop that single image into the PDF page.
+    let container: HTMLDivElement | null = null;
     try {
       notify('جارٍ إعداد الشهادة...', 'info');
 
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4',
-      });
+      const qrData = JSON.stringify({ id: cert.id, num: cert.certificateNumber, student: cert.studentName, date: cert.issueDate });
+      let qrDataUrl = '';
+      try {
+        qrDataUrl = await QRCode.toDataURL(qrData, { width: 240, margin: 1 });
+      } catch {
+        // QR generation failure shouldn't block certificate creation
+      }
 
+      // Design canvas at a high pixel size (landscape A4 aspect ratio,
+      // ~2x print resolution) so the exported PDF stays crisp.
+      const W = 2000;
+      const H = 1414;
+
+      container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.top = '0';
+      container.style.left = '-99999px';
+      container.style.width = `${W}px`;
+      container.style.height = `${H}px`;
+      container.dir = 'rtl';
+      container.style.fontFamily = "'Cairo', system-ui, sans-serif";
+      container.style.background = '#f7f9f8';
+      container.style.boxSizing = 'border-box';
+      container.style.padding = '28px';
+
+      container.innerHTML = `
+        <div style="width:100%;height:100%;box-sizing:border-box;border:5px solid #1f664f;padding:10px;position:relative;">
+          <div style="width:100%;height:100%;box-sizing:border-box;border:2px solid #d88f20;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;position:relative;">
+
+            <div style="color:#1f664f;font-size:56px;font-weight:700;">زاد الحلقات</div>
+            <div style="color:#424a45;font-size:26px;margin-top:8px;">شهادة إتمام</div>
+
+            <div style="width:160px;height:3px;background:#d88f20;margin:28px 0;"></div>
+
+            <div style="color:#1a1f1c;font-size:44px;font-weight:700;">${escapeHtml(cert.studentName)}</div>
+
+            <div style="color:#424a45;font-size:24px;margin-top:22px;">أتمّ بنجاح برنامج</div>
+            <div style="color:#1f664f;font-size:34px;font-weight:700;margin-top:10px;">${escapeHtml(cert.cycleName)}</div>
+
+            <div style="color:#424a45;font-size:22px;margin-top:24px;">نسبة الإنجاز: ${cert.progressPercent}%</div>
+
+            <div style="color:#424a45;font-size:18px;margin-top:18px;">
+              <div>رقم الشهادة: ${escapeHtml(cert.certificateNumber)}</div>
+              <div style="margin-top:4px;">تاريخ الإصدار: ${escapeHtml(cert.issueDate)}</div>
+            </div>
+
+            ${qrDataUrl ? `<img src="${qrDataUrl}" style="position:absolute;bottom:36px;right:36px;width:130px;height:130px;" />` : ''}
+
+            <div style="position:absolute;bottom:36px;left:36px;text-align:center;">
+              <div style="width:170px;border-top:1px solid #787878;padding-top:8px;font-size:16px;color:#424a45;">التوقيع المعتمد</div>
+            </div>
+
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(container);
+
+      // Make sure the Arabic webfont (Cairo) is actually loaded before
+      // rasterizing, otherwise html2canvas can capture a fallback font.
+      if ('fonts' in document) {
+        await document.fonts.ready;
+      }
+
+      const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#f7f9f8', useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
+      pdf.addImage(imgData, 'PNG', 0, 0, pageW, pageH);
 
-      /*
-       * ============================================================
-       * خلفية الشهادة
-       * ============================================================
-       */
-
-      pdf.setFillColor(247, 249, 248);
-      pdf.rect(0, 0, pageW, pageH, 'F');
-
-      /*
-       * ============================================================
-       * الإطار الخارجي
-       * ============================================================
-       */
-
-      pdf.setDrawColor(45, 128, 104);
-      pdf.setLineWidth(2);
-      pdf.rect(10, 10, pageW - 20, pageH - 20);
-
-      /*
-       * الإطار الداخلي
-       */
-
-      pdf.setDrawColor(216, 143, 32);
-      pdf.setLineWidth(0.5);
-      pdf.rect(14, 14, pageW - 28, pageH - 28);
-
-      /*
-       * ============================================================
-       * الشعار
-       * ============================================================
-       *
-       * شعار المشروع موجود في:
-       * public/logo.png
-       *
-       * يتم تحميله وتحويله إلى Data URL قبل إضافته إلى PDF.
-       */
-
-      try {
-        const logoResponse = await fetch('/logo.png');
-
-        if (logoResponse.ok) {
-          const logoBlob = await logoResponse.blob();
-
-          const logoDataUrl = await new Promise<string>(
-            (resolve, reject) => {
-              const reader = new FileReader();
-
-              reader.onloadend = () => {
-                if (typeof reader.result === 'string') {
-                  resolve(reader.result);
-                } else {
-                  reject(new Error('تعذر قراءة الشعار'));
-                }
-              };
-
-              reader.onerror = () => {
-                reject(new Error('تعذر تحميل الشعار'));
-              };
-
-              reader.readAsDataURL(logoBlob);
-            },
-          );
-
-          /*
-           * الشعار في أعلى الشهادة
-           */
-          pdf.addImage(
-            logoDataUrl,
-            'PNG',
-            pageW / 2 - 18,
-            20,
-            36,
-            25,
-          );
-        }
-      } catch {
-        /*
-         * في حال تعذر تحميل الشعار لا نوقف إنشاء الشهادة.
-         */
-      }
-
-      /*
-       * ============================================================
-       * اسم البرنامج
-       * ============================================================
-       */
-
-      pdf.setTextColor(31, 102, 79);
-      pdf.setFontSize(25);
-      pdf.setFont('helvetica', 'bold');
-
-      pdf.text(
-        'زاد الحلقات',
-        pageW / 2,
-        55,
-        {
-          align: 'center',
-        },
-      );
-
-      /*
-       * ============================================================
-       * عنوان الشهادة
-       * ============================================================
-       */
-
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(66, 74, 69);
-
-      pdf.text(
-        'شهادة إتمام',
-        pageW / 2,
-        65,
-        {
-          align: 'center',
-        },
-      );
-
-      /*
-       * ============================================================
-       * الخط الفاصل
-       * ============================================================
-       */
-
-      pdf.setDrawColor(216, 143, 32);
-      pdf.setLineWidth(1);
-
-      pdf.line(
-        pageW / 2 - 40,
-        71,
-        pageW / 2 + 40,
-        71,
-      );
-
-      /*
-       * ============================================================
-       * اسم الطالب
-       * ============================================================
-       */
-
-      pdf.setFontSize(23);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(26, 31, 28);
-
-      pdf.text(
-        cert.studentName,
-        pageW / 2,
-        90,
-        {
-          align: 'center',
-        },
-      );
-
-      /*
-       * ============================================================
-       * نص الشهادة
-       * ============================================================
-       */
-
-      pdf.setFontSize(13);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(66, 74, 69);
-
-      pdf.text(
-        'تشهد إدارة زاد الحلقات بأن الطالب قد أتم البرنامج بنجاح',
-        pageW / 2,
-        105,
-        {
-          align: 'center',
-        },
-      );
-
-      /*
-       * ============================================================
-       * اسم الدورة
-       * ============================================================
-       */
-
-      pdf.setFontSize(19);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(31, 102, 79);
-
-      pdf.text(
-        cert.cycleName,
-        pageW / 2,
-        118,
-        {
-          align: 'center',
-        },
-      );
-
-      /*
-       * ============================================================
-       * نسبة الإنجاز
-       * ============================================================
-       */
-
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(66, 74, 69);
-
-      pdf.text(
-        `نسبة الإنجاز: ${cert.progressPercent}%`,
-        pageW / 2,
-        132,
-        {
-          align: 'center',
-        },
-      );
-
-      /*
-       * ============================================================
-       * معلومات الشهادة
-       * ============================================================
-       */
-
-      pdf.setFontSize(10);
-
-      pdf.text(
-        `رقم الشهادة: ${cert.certificateNumber}`,
-        pageW / 2,
-        143,
-        {
-          align: 'center',
-        },
-      );
-
-      pdf.text(
-        `تاريخ الإصدار: ${cert.issueDate}`,
-        pageW / 2,
-        150,
-        {
-          align: 'center',
-        },
-      );
-
-      /*
-       * ============================================================
-       * QR Code
-       * ============================================================
-       */
-
-      try {
-        const qrData = JSON.stringify({
-          id: cert.id,
-          certificateNumber: cert.certificateNumber,
-          studentName: cert.studentName,
-          issueDate: cert.issueDate,
-        });
-
-        const qrDataUrl = await QRCode.toDataURL(qrData, {
-          width: 250,
-          margin: 1,
-          errorCorrectionLevel: 'M',
-        });
-
-        pdf.addImage(
-          qrDataUrl,
-          'PNG',
-          20,
-          pageH - 55,
-          35,
-          35,
-        );
-      } catch {
-        /*
-         * فشل إنشاء QR لا يمنع إنشاء الشهادة.
-         */
-      }
-
-      /*
-       * ============================================================
-       * التوقيع
-       * ============================================================
-       */
-
-      pdf.setDrawColor(120, 120, 120);
-      pdf.setLineWidth(0.3);
-
-      pdf.line(
-        pageW - 75,
-        pageH - 28,
-        pageW - 30,
-        pageH - 28,
-      );
-
-      pdf.setFontSize(9);
-      pdf.setTextColor(66, 74, 69);
-
-      pdf.text(
-        'التوقيع المعتمد',
-        pageW - 52.5,
-        pageH - 22,
-        {
-          align: 'center',
-        },
-      );
-
-      /*
-       * ============================================================
-       * حفظ الملف
-       * ============================================================
-       */
-
-      pdf.save(
-        `certificate-${cert.certificateNumber}.pdf`,
-      );
-
-      notify('تم تنزيل الشهادة بنجاح', 'success');
-    } catch (error) {
-      console.error('Certificate PDF error:', error);
-
-      notify(
-        'تعذّر إنشاء ملف الشهادة.',
-        'error',
-      );
+      pdf.save(`certificate-${cert.certificateNumber}.pdf`);
+      notify('تم تنزيل الشهادة', 'success');
+    } catch {
+      notify('تعذّر إنشاء ملف الشهادة.', 'error');
+    } finally {
+      if (container) document.body.removeChild(container);
     }
   };
 
-  /*
-   * ================================================================
-   * حالة التحميل
-   * ================================================================
-   */
-
-  if (loading) {
-    return (
-      <div
-        className="flex items-center justify-center py-16"
-        dir="rtl"
-      >
-        جارٍ التحميل...
-      </div>
-    );
-  }
-
-  /*
-   * ================================================================
-   * الصفحة
-   * ================================================================
-   */
+  if (loading) return <div className="py-20 text-center text-on-surface-variant">جارٍ التحميل...</div>;
 
   return (
-    <div dir="rtl" className="space-y-6">
-
-      <PageHeader
-        title="الشهادات"
-        subtitle="استعرض شهادات إتمام البرامج التي أنجزتها وقم بتنزيلها بصيغة PDF."
-      />
+    <div className="animate-fade-in">
+      <PageHeader title="شهاداتي" subtitle="الشهادات التي حصلت عليها من البرنامج" />
 
       {certificates.length === 0 ? (
         <Card>
@@ -397,98 +130,42 @@ export function StudentCertificates() {
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 gap-5">
-
           {certificates.map((cert) => (
-            <Card
-              key={cert.id}
-              className="overflow-hidden"
-            >
-
-              {/* رأس بطاقة الشهادة */}
+            <Card key={cert.id} className="overflow-hidden">
               <div className="bg-gradient-to-l from-primary-600 to-primary-700 text-white p-5 -m-5 mb-4">
-
                 <div className="flex items-center justify-between">
-
                   <Award size={32} />
-
-                  <Badge variant="success">
-                    <span className="flex items-center gap-1">
-                      <CheckCircle size={14} />
-                      معتمدة
-                    </span>
-                  </Badge>
-
+                  <Badge variant="success">معتمدة</Badge>
                 </div>
-
-                <h3 className="text-lg font-bold mt-3">
-                  {cert.cycleName}
-                </h3>
-
+                <h3 className="text-lg font-bold mt-3">{cert.cycleName}</h3>
               </div>
-
-              {/* معلومات الشهادة */}
-              <div className="space-y-3 mb-5">
-
-                <Row
-                  label="رقم الشهادة"
-                  value={cert.certificateNumber}
-                />
-
-                <Row
-                  label="تاريخ الإصدار"
-                  value={cert.issueDate}
-                />
-
-                <Row
-                  label="نسبة الإنجاز"
-                  value={`${cert.progressPercent}%`}
-                />
-
+              <div className="space-y-2 mb-4">
+                <Row label="رقم الشهادة" value={cert.certificateNumber} />
+                <Row label="تاريخ الإصدار" value={cert.issueDate} />
+                <Row label="نسبة الإنجاز" value={`${cert.progressPercent}%`} />
               </div>
-
-              {/* زر التنزيل */}
-              <Button
-                fullWidth
-                icon={<Download size={18} />}
-                onClick={() => generatePDF(cert)}
-              >
+              <Button fullWidth icon={<Download size={18} />} onClick={() => generatePDF(cert)}>
                 تنزيل الشهادة (PDF)
               </Button>
-
             </Card>
           ))}
-
         </div>
       )}
-
     </div>
   );
 }
 
-/*
- * ================================================================
- * صف معلومات الشهادة
- * ================================================================
- */
+function escapeHtml(value: string): string {
+  const div = document.createElement('div');
+  div.textContent = value;
+  return div.innerHTML;
+}
 
-function Row({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-2 border-b border-outline/50 last:border-b-0">
-
-      <span className="text-sm text-on-surface-variant">
-        {label}
-      </span>
-
-      <span className="text-sm font-medium text-on-surface text-left">
-        {value}
-      </span>
-
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-on-surface-variant">{label}</span>
+      <span className="font-medium text-on-surface">{value}</span>
     </div>
   );
 }
